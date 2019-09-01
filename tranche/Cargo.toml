@@ -1,0 +1,29 @@
+[package]
+name = "tranche"
+version = "0.1.0" # update documentation field on bump
+authors = ["Anthony Ramine <nox@nox.paris>"]
+edition = "2018"
+license = "Apache-2.0 OR MIT"
+description = "Tranches are an alternative to slices"
+documentation = "https://docs.rs/tranche/0.1.0"
+repository = "https://github.com/nox/tranche"
+readme = "README.md"
+
+keywords = [
+    "slice",
+]
+
+categories = [
+    "data-structures",
+    "no-std",
+]
+
+[lib]
+bench = false
+test = false
+
+[features]
+std = []
+
+[package.metadata.docs.rs]
+all-features = true

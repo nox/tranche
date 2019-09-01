@@ -1,0 +1,33 @@
+[package]
+name = "cutting_board"
+version = "0.0.0"
+authors = ["Anthony Ramine <nox@nox.paris>"]
+edition = "2018"
+license = "Apache-2.0 OR MIT"
+publish = false
+
+[lib]
+path = "lib.rs"
+test = false
+doctest = false
+bench = false
+doc = false
+
+[features]
+std = ["tranche/std"]
+
+[dependencies]
+tranche = {path = "tranche"}
+
+[dev-dependencies]
+static_assertions = "0.3.4"
+
+[[test]]
+name = "std"
+path = "tests/std.rs"
+required-features = ["std"]
+
+[workspace]
+members = [
+    "tranche",
+]
