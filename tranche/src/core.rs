@@ -60,7 +60,7 @@ impl<'a, T> Tranche<'a, T> {
     ///     "beurre",
     /// ]);
     /// ```
-    pub fn new(slice: &'a impl AsRef<[T]>) -> Self {
+    pub fn new(slice: &'a (impl AsRef<[T]> + ?Sized)) -> Self {
         let slice = slice.as_ref();
         let start = unsafe { NonNull::new_unchecked(slice.as_ptr() as *mut T) };
         let end = if mem::size_of::<T>() == 0 {
@@ -90,7 +90,7 @@ impl<'a, T> Tranche<'a, T> {
     ///
     /// ```
     /// # use tranche::Tranche;
-    /// let a = Tranche::new(&[1, 2, 3]);
+    /// let a = Tranche::new(&[1, 2, 3][..]);
     /// assert!(!a.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
