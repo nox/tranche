@@ -10,6 +10,9 @@ use core::mem;
 use core::ptr::NonNull;
 use core::slice;
 
+#[cfg(feature = "passive")]
+use passive::{AlwaysAligned, AlwaysValid, Immutable};
+
 /// A tranche of `T`.
 ///
 /// Tranches are like slices but represented of a start pointer and an end
@@ -81,7 +84,7 @@ impl<'a, T> Tranche<'a, T> {
     /// assert_eq!(a.len(), 3);
     /// ```
     pub fn len(&self) -> usize {
-        ptr_distance(self.start.as_ptr() as *const T, self.end)
+        ptr_distance(self.start.as_ptr(), self.end)
     }
 
     /// Returns `true` if the tranche has a length of 0.
@@ -94,7 +97,7 @@ impl<'a, T> Tranche<'a, T> {
     /// assert!(!a.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool {
-        self.start.as_ptr() as *const T == self.end
+        self.as_ptr() == self.end
     }
 
     /// Takes the first element out of the tranche.
@@ -144,7 +147,7 @@ impl<'a, T> Tranche<'a, T> {
             return Err(UnexpectedEndError { needed: n, len });
         }
         let start = unsafe { NonNull::new_unchecked(self.post_inc_start(n) as *mut _) };
-        let end = self.start.as_ptr();
+        let end = self.as_ptr();
         let marker = self.marker;
         Ok(Self { start, end, marker })
     }
@@ -165,7 +168,7 @@ impl<'a, T> Tranche<'a, T> {
     /// assert_eq!(tranche.as_slice(), &[2, 3]);
     /// ```
     pub fn as_slice(&self) -> &'a [T] {
-        unsafe { slice::from_raw_parts(self.start.as_ptr() as *const _, self.len()) }
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.len()) }
     }
 
     /// Returns a raw pointer to the tranche's buffer.
@@ -182,7 +185,7 @@ impl<'a, T> Tranche<'a, T> {
     }
 
     unsafe fn post_inc_start(&mut self, offset: usize) -> *const T {
-        let old = self.start.as_ptr();
+        let old = self.as_ptr();
         if mem::size_of::<T>() == 0 {
             self.end = (self.end as *const u8).wrapping_sub(offset) as *const T;
         } else {
@@ -240,7 +243,7 @@ impl<'a, T> BasedTranche<'a, T> {
         if mem::size_of::<T>() == 0 {
             ptr_distance(self.inner.end, self.base)
         } else {
-            ptr_distance(self.base, self.inner.start.as_ptr() as *const _)
+            ptr_distance(self.base, self.inner.as_ptr())
         }
     }
 
@@ -321,6 +324,59 @@ impl<'a, T> BasedTranche<'a, T> {
     }
 }
 
+#[cfg(feature = "passive")]
+impl<'a> BufTranche<'a> {
+    /// Takes the first `n` elements of type `T` out of the tranche.
+    ///
+    /// Returns a new tranche with the first `n` elements of `self` viewed as
+    /// a tranche of `T` values, or `Err(_)` if it is not long enough. The error
+    /// details are expressed in terms of the size of `T`, not the size of `u8`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use tranche::BufTranche;
+    /// let mut v = BufTranche::new(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    /// let four_pairs = v.take_front_as::<[u8; 2]>(4).unwrap();
+    /// assert_eq!(four_pairs.as_slice(), &[[1, 2], [3, 4], [5, 6], [7, 8]]);
+    /// assert_eq!(v.as_slice(), &[9]);
+    ///
+    /// let err = v.take_front_as::<[u8; 2]>(1).unwrap_err();
+    /// assert_eq!(err.needed(), 1);
+    /// assert_eq!(err.len(), 0);
+    /// ```
+    pub fn take_front_as<T>(&mut self, n: usize) -> Result<Tranche<'a, T>, UnexpectedEndError>
+    where
+        T: AlwaysAligned + AlwaysValid + Immutable,
+    {
+        if mem::size_of::<T>() == 0 {
+            return Ok(Tranche::new(unsafe {
+                slice::from_raw_parts(self.as_ptr() as *const T, n)
+            }));
+        }
+        let len = ptr_distance(self.as_ptr() as *const T, self.end as *const T);
+        if n > len {
+            return Err(UnexpectedEndError { needed: n, len });
+        }
+        unsafe {
+            let start =
+                NonNull::new_unchecked(self.post_inc_start(n * mem::size_of::<T>()) as *mut T);
+            let end = self.as_ptr() as *const T;
+            Ok(Tranche { start, end, marker })
+        }
+    }
+}
+
+#[cfg(feature = "passive")]
+impl<'a> BasedBufTranche<'a> {
+    pub fn take_front_as<T>(&mut self, n: usize) -> Result<Tranche<'a, T>, UnexpectedEndError>
+    where
+        T: AlwaysAligned + AlwaysValid + Immutable,
+    {
+        self.inner.take_front_as(n)
+    }
+}
+
 #[inline(always)]
 fn ptr_distance<T>(start: *const T, end: *const T) -> usize {
     let diff = (end as usize).wrapping_sub(start as usize);
@@ -370,7 +426,7 @@ impl<'a, T> From<Tranche<'a, T>> for BasedTranche<'a, T> {
         let base = if mem::size_of::<T>() == 0 {
             inner.end
         } else {
-            inner.start.as_ptr() as *const _
+            inner.as_ptr()
         };
         Self { inner, base }
     }

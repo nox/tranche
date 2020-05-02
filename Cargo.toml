@@ -14,6 +14,7 @@ bench = false
 doc = false
 
 [features]
+passive = ["tranche/passive"]
 std = ["tranche/std"]
 
 [dependencies]

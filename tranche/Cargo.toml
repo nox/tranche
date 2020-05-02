@@ -1,11 +1,11 @@
 [package]
 name = "tranche"
-version = "0.1.0" # update documentation field on bump
+version = "0.1.1" # update documentation field on bump
 authors = ["Anthony Ramine <nox@nox.paris>"]
 edition = "2018"
 license = "Apache-2.0 OR MIT"
 description = "Tranches are an alternative to slices"
-documentation = "https://docs.rs/tranche/0.1.0"
+documentation = "https://docs.rs/tranche/0.1.1/"
 repository = "https://github.com/nox/tranche"
 readme = "README.md"
 
@@ -17,6 +17,9 @@ categories = [
     "data-structures",
     "no-std",
 ]
+
+[dependencies]
+passive = {version = "0.1.4", optional = true}
 
 [lib]
 bench = false

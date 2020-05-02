@@ -1,5 +1,10 @@
 {
     "rust-analyzer.cargo.features": [
+        "passive",
         "std"
-    ]
+    ],
+    "rust-analyzer.checkOnSave.extraArgs": [
+        "--features",
+        "passive std",
+    ],
 }
